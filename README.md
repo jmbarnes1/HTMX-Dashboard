@@ -8,10 +8,14 @@ It uses state persistence with session storage to maintain enabled events across
 
 The events that are tracked can be changed by passing in a parameter that overrides the initial set.
 
+Collapsed panel.<br>
 <img src="01.PNG">
 
+Open panel.<br>
 <img src="02.PNG">
 
+Event picker.<br>
 <img src="03.PNG">
 
+Initialization.<br>
 <img src="04.PNG">
