@@ -7,3 +7,11 @@ It has a non-intrusive UI, using a collapsible bottom dock and dedicated modal f
 It uses state persistence using session storage to maintain enabled event choices across page reloads.
 
 The events that are tracked can be changed by passing in a parameter that overrides the initial set.
+
+<img src="01.PNG">
+
+<img src="02.PNG">
+
+<img src="03.PNG">
+
+<img src="04.PNG">

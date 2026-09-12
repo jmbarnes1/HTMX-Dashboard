@@ -41,7 +41,7 @@
     <script>
     var parameters = 
     {
-        maxCount: 20,
+        maxCount: 150,
         events : 
         [
             { eventName: 'htmx:beforeRequest', eventEnabled: true},
@@ -64,7 +64,6 @@
         {
             localStorage.removeItem('htmx-history-cache')
             initHTMXDashboard(parameters);
-            //initHTMXDashboard();
         }
     );
     </script>
