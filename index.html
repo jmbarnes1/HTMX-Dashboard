@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Frame</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+  
+    <script src="htmx.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/js/bootstrap.min.js" defer></script>
+    <script src="main.js" defer></script>
+    <script src="htmxdashboard.js" defer></script>
+</head>
+
+<body class="p-3 m-3">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <button id="homeButton"
+                class="btn btn-link text-light fw-bold text-decoration-none"
+                hx-get="home.html"
+                hx-trigger="click"
+                hx-target="#mainContainer"
+                hx-swap="innerHTML" >
+                TEST APP
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="mainContainer" 
+                title="mainContainer"
+                hx-get="home.html"
+                hx-trigger="load"
+                hx-target="#mainContainer"
+                hx-swap="innerHTML"
+                hx-history-elt>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    var parameters = 
+    {
+        maxCount: 20,
+        events : 
+        [
+            { eventName: 'htmx:beforeRequest', eventEnabled: true},
+            { eventName: 'htmx:beforeSend', eventEnabled: false},
+            { eventName: 'htmx:afterOnLoad', eventEnabled: false},
+            { eventName: 'htmx:afterRequest', eventEnabled: true},
+            { eventName: 'htmx:responseError', eventEnabled: false},
+            { eventName: 'htmx:sendError', eventEnabled: false},
+            { eventName: 'htmx:timeout', eventEnabled: false},
+            { eventName: 'htmx:beforeSwap', eventEnabled: false},
+            { eventName: 'htmx:afterSwap', eventEnabled: false},
+            { eventName: 'htmx:afterSettle', eventEnabled: false}
+        ]
+    }
+
+    document.addEventListener
+    (
+        "DOMContentLoaded", 
+        function () 
+        {
+            localStorage.removeItem('htmx-history-cache')
+            initHTMXDashboard(parameters);
+            //initHTMXDashboard();
+        }
+    );
+    </script>
+
+</body>
+</html>

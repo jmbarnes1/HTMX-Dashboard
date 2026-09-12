@@ -1,0 +1,7 @@
+.pointer {cursor: pointer;}
+
+input:read-only {
+    background-color: #f0f0f0 !important; /* light gray */
+    color: #666 !important; /* dark gray */
+    cursor: not-allowed !important; /* change cursor to "not allowed" symbol */
+  }

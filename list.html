@@ -1,0 +1,30 @@
+<table class="table table-bordered table-striped table-condensed">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Age</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="pointer"
+            hx-get="hub.html"
+            hx-trigger="click"
+            hx-target="#mainContainer"
+            hx-swap="innerHTML"
+            hx-vals='{"name":"John Doe","age":"30"}'
+            hx-push-url="true">
+            <td>John Doe</td>
+            <td>30</td>
+        </tr>
+        <tr class="pointer"
+            hx-get="hub.html"
+            hx-trigger="click"
+            hx-target="#mainContainer"
+            hx-swap="innerHTML"
+            hx-vals='{"name":"Jane Smith","age":"25"}'
+            hx-push-url="true">
+            <td>Jane Smith</td>
+            <td>25</td>
+        </tr>
+    </tbody>
+</table>

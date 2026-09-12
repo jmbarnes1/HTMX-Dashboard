@@ -1,0 +1,25 @@
+<div id="infoContainer"></div>
+
+<div class="row">
+    <div class="col-5 offset-5">
+        <button name="returnHomeButton"
+            id="returnHomeButton"
+            class="btn btn-primary btn-sm"
+            hx-get="home.html"
+            hx-trigger="click"
+            hx-target="#mainContainer"
+            hx-swap="innerHTML">
+            RETURN
+        </button>
+    </div>
+</div>
+
+<script>
+var inboundParams = new URLSearchParams(window.location.search);
+
+var fullName = inboundParams.get('name');
+var age = inboundParams.get('age');
+
+var template = `<div>${fullName}: ${age}</div>`;
+document.getElementById('infoContainer').insertAdjacentHTML('beforeend', template);          
+</script>
