@@ -1,3 +1,7 @@
+
+
+<img src="Animation.gif" width="500px">
+
 HTMX-Dashboard is a lightweight, vanilla JavaScript debugging widget for HTMX applications. 
 
 It has zero dependencies, making it easy to drop into any project.
