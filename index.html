@@ -10,7 +10,7 @@
     <script src="htmx.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/js/bootstrap.min.js" defer></script>
     <script src="main.js" defer></script>
-    <script src="htmxdashboard.js" defer></script>
+    <script src="htmxeventmonitor.js" defer></script>
 </head>
 
 <body class="p-3 m-3">
@@ -36,8 +36,7 @@
             </div>
         </div>
     </div>
-
-
+    
     <script>
     var parameters = 
     {
@@ -62,7 +61,7 @@
         "DOMContentLoaded", 
         function () 
         {
-            initHTMXDashboard(parameters);
+            initHTMXEventMonitor(parameters);
         }
     );
     </script>

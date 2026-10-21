@@ -183,6 +183,8 @@ function createSettingsModal() {
     document.body.appendChild(overlay);
 
     settingsModal = overlay;
+
+    return settingsModal;
 }
 
 
@@ -214,6 +216,9 @@ function createLogElement(contentContainerInput )
     const timeSpan = document.createElement('span');
     timeSpan.textContent = `⏱ ${timestamp}`; 
 
+    const rerunSpan = document.createElement('span');
+    rerunSpan.textContent = '↻';
+
     fragment.appendChild(seqSpan);
     fragment.appendChild(timeSpan);
 
@@ -226,6 +231,7 @@ function createLogElement(contentContainerInput )
     metaHeader.style.gap = '1rem';
     metaHeader.textContent = ''; 
     metaHeader.appendChild(fragment);
+    // metaHeader.appendChild(rerunSpan);
 
     const contentContainer = document.createElement('div');
     if (contentContainerInput instanceof HTMLElement)
@@ -262,11 +268,18 @@ function createLogElement(contentContainerInput )
     return wrapper;
 }
 
-function prependToDashboard(logElement)
+function prependToEventMonitor(logElement)
 {
-    const body = document.getElementById('htmx-dashboard-body');
-    if (body)
+    const body = document.getElementById('event-monitor-body');
+    
+    // Don't do anything if the body doesn't exist.
+    if (!body)
     {
+        return;
+    }
+
+    if (body) 
+    { 
         body.prepend(logElement);
     }
 
@@ -277,25 +290,25 @@ function prependToDashboard(logElement)
     }
 }
 
-function createDashBoardContainer()
+function createEventMonitorContainer()
 {
-    const htmxDashboardContainer = document.createElement('div');
-    htmxDashboardContainer.id = 'htmx-dashboard';
-    htmxDashboardContainer.style.border = '1px solid rgba(0,0,0,.125)';
-    htmxDashboardContainer.style.borderRadius = '0.25rem';
-    htmxDashboardContainer.style.margin = '1rem';
-    htmxDashboardContainer.style.fontFamily = 'sans-serif';
-    htmxDashboardContainer.style.backgroundColor = '#fff';
-    htmxDashboardContainer.style.display = 'flex';
-    htmxDashboardContainer.style.flexDirection = 'column';
+    const htmxEventMonitorContainer = document.createElement('div');
+    htmxEventMonitorContainer.id = 'htmx-eventMonitor';
+    htmxEventMonitorContainer.style.border = '1px solid rgba(0,0,0,.125)';
+    htmxEventMonitorContainer.style.borderRadius = '0.25rem';
+    htmxEventMonitorContainer.style.margin = '1rem';
+    htmxEventMonitorContainer.style.fontFamily = 'sans-serif';
+    htmxEventMonitorContainer.style.backgroundColor = '#fff';
+    htmxEventMonitorContainer.style.display = 'flex';
+    htmxEventMonitorContainer.style.flexDirection = 'column';
 
-    htmxDashboardContainer.style.position = 'fixed';
-    htmxDashboardContainer.style.left = '0';
-    htmxDashboardContainer.style.right = '0';
-    htmxDashboardContainer.style.bottom = '-420px'; 
-    htmxDashboardContainer.style.height = '440px';
-    htmxDashboardContainer.style.zIndex = '999998';
-    htmxDashboardContainer.style.transition = 'bottom .25s ease';
+    htmxEventMonitorContainer.style.position = 'fixed';
+    htmxEventMonitorContainer.style.left = '0';
+    htmxEventMonitorContainer.style.right = '0';
+    htmxEventMonitorContainer.style.bottom = '-420px'; 
+    htmxEventMonitorContainer.style.height = '440px';
+    htmxEventMonitorContainer.style.zIndex = '999998';
+    htmxEventMonitorContainer.style.transition = 'bottom .25s ease';
 
     const cardHeader = document.createElement('div');
     cardHeader.style.padding = '0.25rem 0.50rem';
@@ -306,7 +319,7 @@ function createDashBoardContainer()
     cardHeader.style.cursor = 'pointer';
 
     const headerTitle = document.createElement('h5');
-    headerTitle.innerText = 'HTMX DASHBOARD';
+    headerTitle.innerText = 'HTMX EVENT MONITOR';
     headerTitle.style.margin = '0';
     headerTitle.style.fontSize = '1.00rem';
     headerTitle.style.fontWeight = '500';
@@ -342,17 +355,16 @@ function createDashBoardContainer()
     applyStyles(configBtn, headerButtonStyles);
     configBtn.addEventListener('click', createSettingsModal);
 
-    // Button to clear the sesion variables.
+    // Button to clear the session variables.
     const clearSessionBtn = document.createElement('button');
     clearSessionBtn.innerText = 'Clear Session';
-    clearSessionBtn.title = 'Clear the session variables holding dashboard information.';
+    clearSessionBtn.title = 'Clear the session variables holding the event monitor information.';
     applyStyles(clearSessionBtn, headerButtonStyles);
     clearSessionBtn.addEventListener
     (
         'click',
         () =>
         {
-
             sessionStorage.setItem(HTMX_INIT,'false');
             sessionStorage.removeItem(HTMX_EVENT_STORAGE_KEY);
             sessionStorage.removeItem(HTMX_INIT);
@@ -384,17 +396,17 @@ function createDashBoardContainer()
     backSpan.appendChild(clearSessionBtn);
 
     const cardBody = document.createElement('div');
-    cardBody.id = 'htmx-dashboard-body';
+    cardBody.id = 'event-monitor-body';
     cardBody.style.padding = '1.25rem';
     cardBody.style.overflowY = 'auto';
 
-    htmxDashboardContainer.appendChild(cardHeader);
-    htmxDashboardContainer.appendChild(cardBody);
-    document.body.append(htmxDashboardContainer);
+    htmxEventMonitorContainer.appendChild(cardHeader);
+    htmxEventMonitorContainer.appendChild(cardBody);
+    document.body.append(htmxEventMonitorContainer);
 
-    let dashboardOpen = false;
+    let eventMonitorOpen = false;
 
-    // Deal with opening and closing dashboard.
+    // Deal with opening and closing the event monitor.
     cardHeader.addEventListener
     (
         'click', (e) =>
@@ -405,9 +417,9 @@ function createDashBoardContainer()
                 return;
             }
 
-            dashboardOpen = !dashboardOpen;
+            eventMonitorOpen = !eventMonitorOpen;
 
-            if (dashboardOpen)
+            if (eventMonitorOpen)
             {
 
                 if (settingsModal) {
@@ -415,11 +427,11 @@ function createDashBoardContainer()
                     settingsModal = null;
                 }
 
-                htmxDashboardContainer.style.bottom = '0';
+                htmxEventMonitorContainer.style.bottom = '0';
             }
             else
             {
-                htmxDashboardContainer.style.bottom = '-420px';
+                htmxEventMonitorContainer.style.bottom = '-420px';
             }
         }
     );
@@ -445,7 +457,6 @@ function createDetailRow(label, value)
 // Central handler for HTMX.
 function handleHtmxEvent(evt) 
 {
-
     // Create a container for details
     const container = document.createElement('div');
 
@@ -469,18 +480,17 @@ function handleHtmxEvent(evt)
     container.appendChild(createDetailRow('Trigger', triggerLabel));
     
     container.appendChild(createDetailRow('Verb', evt.detail.requestConfig?.verb??'Unknown'));
-    container.appendChild(createDetailRow('Path', evt.detail.requestConfig?.path??'Unkown'));
-    container.appendChild(createDetailRow('Response URL', evt.detail.xhr?.responseURL??'Unkown'));
+    container.appendChild(createDetailRow('Path', evt.detail.requestConfig?.path??'Unknown'));
+    container.appendChild(createDetailRow('Response URL', evt.detail.xhr?.responseURL??'Unknown'));
     container.appendChild(createDetailRow('Boosted', evt.detail?.boosted??'false'));
 
     const log = createLogElement(container);
-    prependToDashboard(log);
+    prependToEventMonitor(log);
 }
 
 // Loop through the register using keys.
 function buildEvents()
 {
-
     htmxEvents.forEach
     (
         eventObject =>
@@ -498,7 +508,6 @@ function buildEvents()
 
 function setSession(parameters)
 {
-
     // Have the session variables been set?
     if (!sessionStorage.getItem(HTMX_INIT))
     {
@@ -544,11 +553,11 @@ function setSession(parameters)
 // Let's not run initialization twice.
 let initFinished = false;
 
-function initHTMXDashboard(parameters)
+function initHTMXEventMonitor(parameters)
 {
     // This has already ran.  Don't do it again.
     if (initFinished) return;
-
+    
     // Set flag so it won't run again.
     initFinished = true;
 
@@ -571,6 +580,6 @@ function initHTMXDashboard(parameters)
     // Set max number.
     maxLogs = parseInt(sessionStorage.getItem(HTMX_LOG_MAX));
 
-    createDashBoardContainer();
+    createEventMonitorContainer();
     buildEvents();
 }
