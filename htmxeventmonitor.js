@@ -454,15 +454,49 @@ function createDetailRow(label, value)
     return fragment;
 }
 
+// A weak map to track request start times by XHR reference.
+// Will be used to show request time.
+const requestStartTimes = new WeakMap();
+
+document.body.addEventListener('htmx:beforeRequest', function(evt) {
+    if (evt.detail && evt.detail.xhr) 
+    {
+        // Store start timestamp keyed to this specific XHR object
+        requestStartTimes.set(evt.detail.xhr, performance.now());
+    } 
+    else if (evt.detail) 
+    {
+        // Fallback: attach directly to detail if XHR isn't ready yet
+        evt.detail._startTime = performance.now();
+    }
+});
+
 // Central handler for HTMX.
 function handleHtmxEvent(evt) 
 {
     // Create a container for details
     const container = document.createElement('div');
 
+    // Retrieve start time for this specific request instance
+    let durationText = 'N/A';
+    const xhr = evt.detail?.xhr;
+    
+    if (xhr && requestStartTimes.has(xhr)) 
+    {
+        const startTime = requestStartTimes.get(xhr);
+        const elapsed = performance.now() - startTime;
+        durationText = `${elapsed.toFixed(1)} ms`;
+    } 
+    else if (evt.detail?._startTime) 
+    {
+        const elapsed = performance.now() - evt.detail._startTime;
+        durationText = `${elapsed.toFixed(1)} ms`;
+    }
+
     // Add infomation.
     // It would be nice to be able to pass this info in via the parameters.  
     container.appendChild(createDetailRow('Event Type', evt.type));
+    container.appendChild(createDetailRow('Duration', durationText));
     container.appendChild(createDetailRow('Response Status', evt.detail.xhr?.status ?? 'Unknown'));
     container.appendChild(createDetailRow('Target ID', evt.detail.target?.id));
 
