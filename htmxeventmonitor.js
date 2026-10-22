@@ -188,7 +188,7 @@ function createSettingsModal() {
 }
 
 
-function createLogElement(contentContainerInput )
+function createLogElement(contentContainerInput, rerunHandler = null)
 {
     const wrapper = document.createElement('p');
     wrapper.style.border = '1px solid #dee2e6';
@@ -219,6 +219,23 @@ function createLogElement(contentContainerInput )
     const rerunSpan = document.createElement('span');
     rerunSpan.textContent = '↻';
 
+    // Style the rerun icon to look interactive
+    if (typeof rerunHandler === 'function') {
+        rerunSpan.style.cursor = 'pointer';
+        rerunSpan.style.fontWeight = 'bold';
+        rerunSpan.style.color = '#0d6efd';
+        rerunSpan.title = 'Re-issue this HTMX request';
+        // Attach the click event
+        rerunSpan.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevents collapsing/expanding parent elements if attached
+            rerunHandler();
+        });
+    } else {
+        // Dim the icon if rerun metadata isn't available for this event
+        rerunSpan.style.color = '#adb5bd';
+        rerunSpan.style.cursor = 'not-allowed';
+    }
+
     fragment.appendChild(seqSpan);
     fragment.appendChild(timeSpan);
 
@@ -231,7 +248,7 @@ function createLogElement(contentContainerInput )
     metaHeader.style.gap = '1rem';
     metaHeader.textContent = ''; 
     metaHeader.appendChild(fragment);
-    // metaHeader.appendChild(rerunSpan);
+    metaHeader.appendChild(rerunSpan);
 
     const contentContainer = document.createElement('div');
     if (contentContainerInput instanceof HTMLElement)
@@ -454,33 +471,69 @@ function createDetailRow(label, value)
     return fragment;
 }
 
+
 // A weak map to track request start times by XHR reference.
 // Will be used to show request time.
 const requestStartTimes = new WeakMap();
 
-document.body.addEventListener('htmx:beforeRequest', function(evt) {
-    if (evt.detail && evt.detail.xhr) 
+document.body.addEventListener
+(
+    'htmx:beforeRequest', 
+    function(evt) 
     {
-        // Store start timestamp keyed to this specific XHR object
-        requestStartTimes.set(evt.detail.xhr, performance.now());
-    } 
-    else if (evt.detail) 
-    {
-        // Fallback: attach directly to detail if XHR isn't ready yet
-        evt.detail._startTime = performance.now();
+        if (evt.detail && evt.detail.xhr) 
+        {
+            // Store start timestamp keyed to this specific XHR object
+            requestStartTimes.set(evt.detail.xhr, performance.now());
+        } 
+        else if (evt.detail) 
+        {
+            // Fallback: attach directly to detail if XHR isn't ready yet
+            evt.detail._startTime = performance.now();
+        }
     }
-});
+);
+
+// A weak  map to track active request contexts.
+// Will be used to rerun events.
+const htmxRequestStore = new WeakMap();
+
+document.body.addEventListener
+(
+    'htmx:beforeRequest', 
+    function(evt) 
+    {
+        const xhr = evt.detail?.xhr;
+        if (!xhr) return;
+
+        // Extract everything needed to re-issue the request later
+        const requestConfig = evt.detail.requestConfig || {};
+        
+        htmxRequestStore.set
+        (
+            xhr, 
+            {
+                startTime: performance.now(),
+                verb: requestConfig.verb || 'GET',
+                path: requestConfig.path || evt.detail.path,
+                target: evt.detail.target || requestConfig.elt,
+                values: requestConfig.parameters || {},
+                headers: requestConfig.headers || {}
+            }
+        );
+    }
+);
 
 // Central handler for HTMX.
 function handleHtmxEvent(evt) 
 {
-    // Create a container for details
-    const container = document.createElement('div');
-
-    // Retrieve start time for this specific request instance
-    let durationText = 'N/A';
+    // Store xhr data.
     const xhr = evt.detail?.xhr;
-    
+
+    // Duration of request.
+    // Retrieve start time for this specific request instance.
+    let durationText = 'N/A';
+        
     if (xhr && requestStartTimes.has(xhr)) 
     {
         const startTime = requestStartTimes.get(xhr);
@@ -491,6 +544,36 @@ function handleHtmxEvent(evt)
     {
         const elapsed = performance.now() - evt.detail._startTime;
         durationText = `${elapsed.toFixed(1)} ms`;
+    }
+
+    // Rerun.
+    // Create a container for details.
+    const container = document.createElement('div');
+    const requestData = xhr ? htmxRequestStore.get(xhr) : null;
+    
+    let rerunHandler = null;
+    if (requestData && requestData.path) 
+    {
+        rerunHandler = () => 
+        {
+            if (typeof htmx !== 'undefined') 
+            {
+                htmx.ajax
+                (
+                    requestData.verb, 
+                    requestData.path, 
+                    {
+                        target: requestData.target,
+                        values: requestData.values,
+                        headers: requestData.headers
+                    }
+                );
+            } 
+            else 
+            {
+                console.warn('HTMX is not defined; cannot rerun request.');
+            }
+        };
     }
 
     // Add infomation.
@@ -518,7 +601,7 @@ function handleHtmxEvent(evt)
     container.appendChild(createDetailRow('Response URL', evt.detail.xhr?.responseURL??'Unknown'));
     container.appendChild(createDetailRow('Boosted', evt.detail?.boosted??'false'));
 
-    const log = createLogElement(container);
+    const log = createLogElement(container, rerunHandler);
     prependToEventMonitor(log);
 }
 
