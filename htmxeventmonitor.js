@@ -26,17 +26,18 @@ var defaultSettings =
 
 // Holds events that will be tracked.
 var htmxEvents = [];
-
 var maxLogs;
 
 // Holds pameters that are passed in.  Needed for session reset.
 var stashedParameters;
+
 
 // Helper function.  Should probably use on other objects at some point.
 function applyStyles(el, styles)
 {
     Object.assign(el.style, styles);
 }
+
 
 // Hold styling info for header buttons.
 const headerButtonStyles =
@@ -50,6 +51,7 @@ const headerButtonStyles =
     cursor: 'pointer',
     fontSize: '0.875rem'
 };
+
 
 // Generate the modal.
 let settingsModal = null;
@@ -285,6 +287,7 @@ function createLogElement(contentContainerInput, rerunHandler = null)
     return wrapper;
 }
 
+
 function prependToEventMonitor(logElement)
 {
     const body = document.getElementById('event-monitor-body');
@@ -306,6 +309,7 @@ function prependToEventMonitor(logElement)
         body.lastElementChild.remove();
     }
 }
+
 
 function createEventMonitorContainer()
 {
@@ -454,7 +458,8 @@ function createEventMonitorContainer()
     );
 }
 
-function createDetailRow(label, value)
+
+function createDetailRow(label, value, targetNode = null)
 {
     const fragment = document.createDocumentFragment();
 
@@ -464,6 +469,11 @@ function createDetailRow(label, value)
     const valueSpan = document.createElement('span');
     valueSpan.textContent = value || 'None'; 
 
+    // If an HTMX DOM element was passed in, attach the mouseover handler
+    if (targetNode) {
+        attachElementHighlight(valueSpan, targetNode);
+    }
+
     fragment.appendChild(strong);
     fragment.appendChild(valueSpan);
     fragment.appendChild(document.createElement('br'));
@@ -472,30 +482,7 @@ function createDetailRow(label, value)
 }
 
 
-// A weak map to track request start times by XHR reference.
-// Will be used to show request time.
-const requestStartTimes = new WeakMap();
-
-document.body.addEventListener
-(
-    'htmx:beforeRequest', 
-    function(evt) 
-    {
-        if (evt.detail && evt.detail.xhr) 
-        {
-            // Store start timestamp keyed to this specific XHR object
-            requestStartTimes.set(evt.detail.xhr, performance.now());
-        } 
-        else if (evt.detail) 
-        {
-            // Fallback: attach directly to detail if XHR isn't ready yet
-            evt.detail._startTime = performance.now();
-        }
-    }
-);
-
-// A weak  map to track active request contexts.
-// Will be used to rerun events.
+// A WeakMap to track active request context (timing and rerun information).
 const htmxRequestStore = new WeakMap();
 
 document.body.addEventListener
@@ -503,26 +490,32 @@ document.body.addEventListener
     'htmx:beforeRequest', 
     function(evt) 
     {
-        const xhr = evt.detail?.xhr;
-        if (!xhr) return;
+        const detail = evt.detail;
+        if (!detail) return;
 
-        // Extract everything needed to re-issue the request later
-        const requestConfig = evt.detail.requestConfig || {};
-        
-        htmxRequestStore.set
-        (
-            xhr, 
-            {
-                startTime: performance.now(),
-                verb: requestConfig.verb || 'GET',
-                path: requestConfig.path || evt.detail.path,
-                target: evt.detail.target || requestConfig.elt,
-                values: requestConfig.parameters || {},
-                headers: requestConfig.headers || {}
-            }
-        );
+        const xhr = detail.xhr;
+        const requestConfig = detail.requestConfig || {};
+        const startTime = performance.now();
+
+        const requestData = {
+            startTime: startTime,
+            verb: requestConfig.verb || 'GET',
+            path: requestConfig.path || detail.path,
+            target: detail.target || requestConfig.elt,
+            values: requestConfig.parameters || {},
+            headers: requestConfig.headers || {}
+        };
+
+        if (xhr) {
+            // Store keyed to the XHR instance
+            htmxRequestStore.set(xhr, requestData);
+        } else {
+            // Fallback: store directly on detail if XHR isn't initialized yet
+            detail._requestData = requestData;
+        }
     }
 );
+
 
 // Central handler for HTMX.
 function handleHtmxEvent(evt) 
@@ -530,71 +523,73 @@ function handleHtmxEvent(evt)
     // Store xhr data.
     const xhr = evt.detail?.xhr;
 
-    // Duration of request.
-    // Retrieve start time for this specific request instance.
+    // Fetch request context from WeakMap or detail fallback
+    const requestData = xhr 
+        ? htmxRequestStore.get(xhr) 
+        : evt.detail?._requestData;
+
+    // Calculate duration
     let durationText = 'N/A';
-        
-    if (xhr && requestStartTimes.has(xhr)) 
-    {
-        const startTime = requestStartTimes.get(xhr);
-        const elapsed = performance.now() - startTime;
-        durationText = `${elapsed.toFixed(1)} ms`;
-    } 
-    else if (evt.detail?._startTime) 
-    {
-        const elapsed = performance.now() - evt.detail._startTime;
+    if (requestData?.startTime) {
+        const elapsed = performance.now() - requestData.startTime;
         durationText = `${elapsed.toFixed(1)} ms`;
     }
 
-    // Rerun.
-    // Create a container for details.
-    const container = document.createElement('div');
-    const requestData = xhr ? htmxRequestStore.get(xhr) : null;
-    
+    // Build rerun callback
     let rerunHandler = null;
-    if (requestData && requestData.path) 
-    {
-        rerunHandler = () => 
-        {
-            if (typeof htmx !== 'undefined') 
-            {
-                htmx.ajax
-                (
-                    requestData.verb, 
-                    requestData.path, 
-                    {
-                        target: requestData.target,
-                        values: requestData.values,
-                        headers: requestData.headers
-                    }
-                );
-            } 
-            else 
-            {
-                console.warn('HTMX is not defined; cannot rerun request.');
+    if (requestData && requestData.path) {
+        rerunHandler = () => {
+            if (typeof htmx !== 'undefined') {
+                htmx.ajax(requestData.verb, requestData.path, {
+                    target: requestData.target,
+                    values: requestData.values,
+                    headers: requestData.headers
+                });
             }
         };
     }
 
+    
+
+    // Stash the details so they are easy to access.
+    const detail = evt.detail || {};
+    const targetElement = detail.target;
+    const triggerElement = detail.requestConfig?.elt || detail.elt;
+
+
+
     // Add infomation.
-    // It would be nice to be able to pass this info in via the parameters.  
+    // It would be nice to be able to pass this info in via the parameters.
+    const container = document.createElement('div');
     container.appendChild(createDetailRow('Event Type', evt.type));
     container.appendChild(createDetailRow('Duration', durationText));
     container.appendChild(createDetailRow('Response Status', evt.detail.xhr?.status ?? 'Unknown'));
-    container.appendChild(createDetailRow('Target ID', evt.detail.target?.id));
+    //container.appendChild(createDetailRow('Target ID', evt.detail.target?.id));
 
-    const elt = evt.detail.requestConfig?.elt || evt.detail.elt;
+    // Attach highlight to Target ID row
+    container.appendChild(createDetailRow('Target ID', targetElement?.id || 'None', targetElement));
+
+    
+    
+    // Build trigger text label
     let triggerLabel = 'None';
-
-    if (elt) 
-    {
-        const tag = elt.tagName ? elt.tagName.toLowerCase() : '';
-        const id = elt.id ? `#${elt.id}` : '';
-
-        triggerLabel = `${tag}${id}` || 'Unknown Element';
+    if (triggerElement && triggerElement.tagName) {
+        const tag = triggerElement.tagName.toLowerCase();
+        const id = triggerElement.id ? `#${triggerElement.id}` : '';
+        triggerLabel = `${tag}${id}`;
     }
+    
+    //const elt = evt.detail.requestConfig?.elt || evt.detail.elt;
+    // let triggerLabel = 'None';
+    // if (elt) 
+    // {
+    //     const tag = elt.tagName ? elt.tagName.toLowerCase() : '';
+    //     const id = elt.id ? `#${elt.id}` : '';
 
-    container.appendChild(createDetailRow('Trigger', triggerLabel));
+    //     triggerLabel = `${tag}${id}` || 'Unknown Element';
+    // }
+
+    container.appendChild(createDetailRow('Trigger', triggerLabel, triggerElement));
     
     container.appendChild(createDetailRow('Verb', evt.detail.requestConfig?.verb??'Unknown'));
     container.appendChild(createDetailRow('Path', evt.detail.requestConfig?.path??'Unknown'));
@@ -604,6 +599,56 @@ function handleHtmxEvent(evt)
     const log = createLogElement(container, rerunHandler);
     prependToEventMonitor(log);
 }
+
+
+// Highlighting targets could be useful.
+function attachElementHighlight(labelElement, targetElement) 
+{
+    if (!targetElement || !(targetElement instanceof HTMLElement)) return;
+
+    let originalOutline = '';
+    let originalBoxShadow = '';
+
+    labelElement.style.cursor = 'pointer';
+
+    labelElement.addEventListener
+    (
+        'mouseenter', 
+        () => 
+        {
+            if (!document.body.contains(targetElement)) 
+            {
+                labelElement.title = 'Element is no longer in the DOM';
+                labelElement.style.textDecoration = 'line-through';
+                return;
+            }
+
+            // Save original styles
+            originalOutline = targetElement.style.outline;
+            originalBoxShadow = targetElement.style.boxShadow;
+
+            // Apply high-visibility highlight frame
+            targetElement.style.outline = '2px solid #ff4757';
+            targetElement.style.boxShadow = '0 0 8px rgba(255, 71, 87, 0.6)';
+        }
+    );
+
+    labelElement.addEventListener
+    (
+        'mouseleave', 
+        () => 
+        {
+            if (document.body.contains(targetElement)) 
+            {
+                targetElement.style.outline = originalOutline;
+                targetElement.style.boxShadow = originalBoxShadow;
+            }
+            labelElement.title = '';
+            labelElement.style.textDecoration = 'none';
+        }
+    );
+}
+
 
 // Loop through the register using keys.
 function buildEvents()
@@ -622,6 +667,7 @@ function buildEvents()
         }
     );
 }
+
 
 function setSession(parameters)
 {
@@ -666,6 +712,7 @@ function setSession(parameters)
         sessionStorage.setItem(HTMX_INIT,'true')
     }
 }
+
 
 // Let's not run initialization twice.
 let initFinished = false;
