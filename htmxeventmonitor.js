@@ -6,6 +6,7 @@ const HTMX_INIT = 'htmxDebugger.init';
 const HTMX_EVENT_STORAGE_KEY = 'htmxDebugger.htmxEvents';
 const HTMX_LOG_MAX = 'htmxDebugger.maxCount';
 
+// These can be overridden by passing an an object with needed values.
 var defaultSettings = 
 {
     maxCount: 200,
@@ -26,13 +27,14 @@ var defaultSettings =
 
 // Holds events that will be tracked.
 var htmxEvents = [];
+//  What is the maximum number of log entries to track.
 var maxLogs;
 
 // Holds pameters that are passed in.  Needed for session reset.
 var stashedParameters;
 
 
-// Helper function.  Should probably use on other objects at some point.
+// Helper function to apply styles.
 function applyStyles(el, styles)
 {
     Object.assign(el.style, styles);
@@ -56,10 +58,12 @@ const headerButtonStyles =
 // Generate the modal.
 let settingsModal = null;
 
-function createSettingsModal() {
+function createSettingsModal() 
+{
 
     // Modal already exists — no need to recreate.
-    if (settingsModal) {
+    if (settingsModal) 
+    {
         return settingsModal;
     }
 
@@ -76,7 +80,7 @@ function createSettingsModal() {
     overlay.style.alignItems = 'center';
     overlay.style.zIndex = '999999';
 
-    // Build the modal.
+    // Build the modal.  This is where events are turned on or off.
     const modal = document.createElement('div');
     modal.style.backgroundColor = '#fff';
     modal.style.borderRadius = '0.375rem';
@@ -85,6 +89,7 @@ function createSettingsModal() {
     modal.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
     modal.style.fontFamily = 'sans-serif';
 
+    // Build the header.
     const h6 = document.createElement('h6');
     h6.textContent = 'Toggle Monitored Events';
     Object.assign
@@ -98,7 +103,7 @@ function createSettingsModal() {
         }
     );
 
-    // Modal Header
+    // Build the modal header.
     const mHeader = document.createElement('div');
     mHeader.style.padding = '1rem';
     mHeader.style.backgroundColor = '#141314';
@@ -109,11 +114,13 @@ function createSettingsModal() {
     mHeader.textContent = '';
     mHeader.appendChild(h6);
 
-    const closeModal = () => {
+    const closeModal = () => 
+    {
         overlay.remove();
         settingsModal = null;
     };
 
+    // Build the close button.
     const closeX = document.createElement('span');
     closeX.textContent = '🗙';
     closeX.style.color = 'white';
@@ -144,7 +151,7 @@ function createSettingsModal() {
             checkbox.type = 'checkbox';
             checkbox.checked = eventObject.eventEnabled;
 
-            // Save checkbox state.
+            // Create the function to save checkbox state.
             checkbox.addEventListener
             (
                 'change',
@@ -218,11 +225,12 @@ function createLogElement(contentContainerInput, rerunHandler = null)
     const timeSpan = document.createElement('span');
     timeSpan.textContent = `⏱ ${timestamp}`; 
 
+    // Build the rerun icon.
     const rerunSpan = document.createElement('span');
     rerunSpan.textContent = '↻';
 
-    // Style the rerun icon to look interactive
-    if (typeof rerunHandler === 'function') {
+    if (typeof rerunHandler === 'function') 
+    {
         rerunSpan.style.cursor = 'pointer';
         rerunSpan.style.fontWeight = 'bold';
         rerunSpan.style.color = '#0d6efd';
@@ -232,7 +240,9 @@ function createLogElement(contentContainerInput, rerunHandler = null)
             e.stopPropagation(); // Prevents collapsing/expanding parent elements if attached
             rerunHandler();
         });
-    } else {
+    } 
+    else 
+    {
         // Dim the icon if rerun metadata isn't available for this event
         rerunSpan.style.color = '#adb5bd';
         rerunSpan.style.cursor = 'not-allowed';
@@ -310,7 +320,7 @@ function prependToEventMonitor(logElement)
     }
 }
 
-
+// Slide up container.
 function createEventMonitorContainer()
 {
     const htmxEventMonitorContainer = document.createElement('div');
@@ -470,7 +480,8 @@ function createDetailRow(label, value, targetNode = null)
     valueSpan.textContent = value || 'None'; 
 
     // If an HTMX DOM element was passed in, attach the mouseover handler
-    if (targetNode) {
+    if (targetNode) 
+    {
         attachElementHighlight(valueSpan, targetNode);
     }
 
@@ -497,7 +508,8 @@ document.body.addEventListener
         const requestConfig = detail.requestConfig || {};
         const startTime = performance.now();
 
-        const requestData = {
+        const requestData = 
+        {
             startTime: startTime,
             verb: requestConfig.verb || 'GET',
             path: requestConfig.path || detail.path,
@@ -506,10 +518,13 @@ document.body.addEventListener
             headers: requestConfig.headers || {}
         };
 
-        if (xhr) {
-            // Store keyed to the XHR instance
+        if (xhr) 
+        {
+            // Store the xhr data in the weak map.
             htmxRequestStore.set(xhr, requestData);
-        } else {
+        } 
+        else 
+        {
             // Fallback: store directly on detail if XHR isn't initialized yet
             detail._requestData = requestData;
         }
@@ -530,33 +545,37 @@ function handleHtmxEvent(evt)
 
     // Calculate duration
     let durationText = 'N/A';
-    if (requestData?.startTime) {
+    if (requestData?.startTime) 
+    {
         const elapsed = performance.now() - requestData.startTime;
         durationText = `${elapsed.toFixed(1)} ms`;
     }
 
     // Build rerun callback
     let rerunHandler = null;
-    if (requestData && requestData.path) {
-        rerunHandler = () => {
-            if (typeof htmx !== 'undefined') {
-                htmx.ajax(requestData.verb, requestData.path, {
-                    target: requestData.target,
-                    values: requestData.values,
-                    headers: requestData.headers
-                });
+    if (requestData && requestData.path) 
+    {
+        rerunHandler = () => 
+        {
+            if (typeof htmx !== 'undefined') 
+            {
+                htmx.ajax
+                (
+                    requestData.verb, requestData.path, 
+                    {
+                        target: requestData.target,
+                        values: requestData.values,
+                        headers: requestData.headers
+                    }
+                );
             }
         };
     }
-
-    
 
     // Stash the details so they are easy to access.
     const detail = evt.detail || {};
     const targetElement = detail.target;
     const triggerElement = detail.requestConfig?.elt || detail.elt;
-
-
 
     // Add infomation.
     // It would be nice to be able to pass this info in via the parameters.
@@ -564,30 +583,18 @@ function handleHtmxEvent(evt)
     container.appendChild(createDetailRow('Event Type', evt.type));
     container.appendChild(createDetailRow('Duration', durationText));
     container.appendChild(createDetailRow('Response Status', evt.detail.xhr?.status ?? 'Unknown'));
-    //container.appendChild(createDetailRow('Target ID', evt.detail.target?.id));
 
     // Attach highlight to Target ID row
     container.appendChild(createDetailRow('Target ID', targetElement?.id || 'None', targetElement));
 
-    
-    
     // Build trigger text label
     let triggerLabel = 'None';
-    if (triggerElement && triggerElement.tagName) {
+    if (triggerElement && triggerElement.tagName) 
+    {
         const tag = triggerElement.tagName.toLowerCase();
         const id = triggerElement.id ? `#${triggerElement.id}` : '';
         triggerLabel = `${tag}${id}`;
     }
-    
-    //const elt = evt.detail.requestConfig?.elt || evt.detail.elt;
-    // let triggerLabel = 'None';
-    // if (elt) 
-    // {
-    //     const tag = elt.tagName ? elt.tagName.toLowerCase() : '';
-    //     const id = elt.id ? `#${elt.id}` : '';
-
-    //     triggerLabel = `${tag}${id}` || 'Unknown Element';
-    // }
 
     container.appendChild(createDetailRow('Trigger', triggerLabel, triggerElement));
     
@@ -725,7 +732,7 @@ function initHTMXEventMonitor(parameters)
     // Set flag so it won't run again.
     initFinished = true;
 
-    // If parameters are passed in, stash them in case reset session button is activated.
+    // If parameters are passed in, stash them in case reset session button is used.
     if (typeof parameters === 'object' && parameters !== null)
     {
         stashedParameters = parameters
