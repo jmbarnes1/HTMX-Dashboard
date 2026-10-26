@@ -32,7 +32,7 @@ HTMX Event Monitor provides a non-intrusive bottom dock that logs lifecycle even
 | Event Picker Modal | Highlight Target Example |
 | :---: | :---: |
 | <img src="03.PNG" width="400px"> | <img src="04.PNG" width="400px"> |
-| *Toggle exact HTMX lifecycle events on or off.* | *Configure max logs and default event states on startup.* |
+| *Toggle exact HTMX lifecycle events on or off.* | *Highlight targets and triggers.* |
 
 ---
 
