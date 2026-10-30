@@ -43,11 +43,16 @@ Add `htmxeventmonitor.js` to your project:
 ```html
 <script src="path/to/htmxeventmonitor.js"></script>
 ```
+or use a CDN like: 
+```html
+<script src="https://cdn.jsdelivr.net/gh/jmbarnes1/htmx-event-monitor@main/htmxeventmonitor.js"></script>
+```
 ### 2. Initialize the Monitor
 Initialize the monitor when the DOM loads, optionally passing custom configuration settings:
 
 ```HTML
 <script>
+    // Parameters are optional.  There is a set of default options built in.
     var parameters = {
         maxCount: 150, // Max log history to retain
         events: [
@@ -66,6 +71,8 @@ Initialize the monitor when the DOM loads, optionally passing custom configurati
 
     document.addEventListener("DOMContentLoaded", function () {
         initHTMXEventMonitor(parameters);
+        //Initialize without custom parameters.
+        //initHTMXEventMonitor();
     });
 </script>
 ```
